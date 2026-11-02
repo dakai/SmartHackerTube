@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Written by CI into the "latest" release of the fork. Assets: update.json + the beta APKs. -->
     <string-array name="update_urls">
-        <item>https://github.com/yuliskov/SmartTubeNext/releases/download/latest/smarttube_beta2.json</item>
+        <item>https://github.com/dakai/SmartHackerTube/releases/download/latest/update.json</item>
     </string-array>
 </resources>

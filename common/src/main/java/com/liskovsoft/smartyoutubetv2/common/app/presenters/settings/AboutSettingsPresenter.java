@@ -86,6 +86,11 @@ public class AboutSettingsPresenter extends BasePresenter<Void> {
     }
 
     private void appendUpdateCheckButton(AppDialogPresenter settingsPresenter) {
+        // No manifest published for this flavor: an empty list would leave the loading dialog spinning.
+        if (getContext().getResources().getStringArray(R.array.update_urls).length == 0) {
+            return;
+        }
+
         OptionItem updateCheckOption = UiOptionItem.from(
                 getContext().getString(R.string.check_for_updates),
                 option -> AppUpdatePresenter.instance(getContext()).start(true));

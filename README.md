@@ -1,5 +1,4 @@
-[<img src="images/badge_fdroid.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/app.smarttube.fdroid/)
-[<img src="images/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/yuliskov/SmartTube/releases)
+[<img src="images/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/dakai/SmartHackerTube/releases)
 
 # Important announcement about the app
 
@@ -75,11 +74,11 @@ You can use either of the following methods to install the app:
 
 **Troubleshooting:** See device specific notes below. If installation fails, either your **disk space is full** or the APK file didn't download correctly; clear up space and try downloading again. If the app installed, but crashes when opening, make sure to install it to internal memory, not to an SD card / external storage.
 
-**The app has a built-in updater** with changelog. You can also find all releases and the **changelog** on the [Telegram channel @SmartTubeNewsEN](https://t.me/s/SmartTubeNewsEN) (readable without account) or on [Github](https://github.com/yuliskov/SmartTube/releases/).
+**The app has a built-in updater** with changelog. Every build publishes to the [latest release](https://github.com/dakai/SmartHackerTube/releases/latest).
 
-> latest [**beta download**](https://github.com/yuliskov/SmartTube/releases/download/latest/smarttube_beta.apk)
+> latest [**beta download**](https://github.com/dakai/SmartHackerTube/releases/latest)
 >
-> latest [stable download](https://github.com/yuliskov/SmartTube/releases/download/latest/smarttube_stable.apk)
+> the app updates itself from the same release
 
 
 ### Installation (Chromecast with Google TV)

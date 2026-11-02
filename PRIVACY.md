@@ -2,7 +2,7 @@
 
 **Last Updated:** March 21, 2026
 
-This Privacy Policy applies specifically to the **F-Droid flavor** of SmartTube (Package ID: `app.smarttube.fdroid`). This version is specifically hardened for user privacy and compliance with F-Droid’s inclusion policy.
+This Privacy Policy applies specifically to the **F-Droid flavor** of SmartHackerTube (Package ID: `org.dakai.smarthackertube.fdroid`). This version is specifically hardened for user privacy and compliance with F-Droid’s inclusion policy.
 
 ## 1. Scope of this Policy
 This document covers the **F-Droid build** only. Other versions or "flavors" of the application (e.g., Stable, Beta) may contain additional features such as self-update mechanisms or crash reporting that are removed in this specific F-Droid release.

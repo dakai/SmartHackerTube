@@ -5,6 +5,9 @@ on:
     branches: [ "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,8 +31,12 @@ jobs:
       - name: Update Version Name
         id: get_version
         run: |
-          # Keep the original code to make the nightly and original builds interchangeable
+          # Nightly name keeps the base version; the code must grow so the in-app updater can compare builds.
           sed -i "s/versionName \"\(.*\)\"/versionName \"\1-nightly-${{ github.run_number }}\"/" smarttubetv/build.gradle
+          VERSION_CODE=$((2458 + ${{ github.run_number }}))
+          sed -i "s/versionCode [0-9]*/versionCode $VERSION_CODE/" smarttubetv/build.gradle
+          echo "VERSION_NAME=$(grep "versionName" smarttubetv/build.gradle | head -n 1 | awk -F'"' '{print $2}')" >> $GITHUB_OUTPUT
+          echo "VERSION_CODE=$VERSION_CODE" >> $GITHUB_OUTPUT
           echo "VERSION_NAME=$(grep "versionName" smarttubetv/build.gradle | head -n 1 | awk -F'"' '{print $2}')" >> $GITHUB_OUTPUT
 
       - name: Configure Build Signing
@@ -123,3 +130,36 @@ jobs:
           name: SmartTube_${{ steps.get_version.outputs.VERSION_NAME }}_x86
           path: ./smarttubetv/build/outputs/apk/stbeta/*/*_x86.apk
           if-no-files-found: error
+
+      - name: Generate update manifest
+        if: ${{ env.HAS_SIGNING_KEY == 'true' }}
+        env:
+          VERSION_NAME: ${{ steps.get_version.outputs.VERSION_NAME }}
+          VERSION_CODE: ${{ steps.get_version.outputs.VERSION_CODE }}
+        run: |
+          python3 - <<'PY'
+          import json, os, subprocess
+          name = os.environ["VERSION_NAME"]
+          base = "https://github.com/dakai/SmartHackerTube/releases/download/latest/"
+          package = {f"downloadUrlList_{abi}": [f"{base}SmartTube_beta_{name}_{abi}.apk"]
+                     for abi in ("arm64-v8a", "armeabi-v7a", "x86")}
+          package["downloadUrl"] = f"{base}SmartTube_beta_{name}_universal.apk"
+          subject = subprocess.check_output(["git", "log", "-1", "--pretty=%s"], text=True).strip()
+          manifest = {"package": package,
+                      name: {"versionCode": int(os.environ["VERSION_CODE"]), "changelog": [subject]}}
+          with open("update.json", "w") as out:
+              json.dump(manifest, out, indent=2)
+          PY
+          cat update.json
+
+      - name: Publish latest release
+        if: ${{ env.HAS_SIGNING_KEY == 'true' && github.ref == 'refs/heads/master' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest \
+            --title "Latest beta build" \
+            --notes "Nightly build ${{ steps.get_version.outputs.VERSION_NAME }}" \
+            update.json \
+            ./smarttubetv/build/outputs/apk/stbeta/release/*.apk
