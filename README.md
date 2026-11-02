@@ -1,55 +1,38 @@
-[<img src="images/badge_github.png" alt="Get it on GitHub" height="80">](https://github.com/dakai/SmartHackerTube/releases)
+<div align="center">
 
-# Important announcement about the app
+<img src="images/app_icon.png" width="112" alt="SmartHackerTube"/>
 
-My development environment was infected by unknown malicious software, as a result of which a few builds may have been affected. Once the issue was detected, I secured everything with a full disk wipe, restored a clean setup, and now all builds are scanned with VirusTotal. The F-Droid version will also be verified before release.
+<h1>SmartHackerTube</h1>
 
-Public keys may have been compromised, which is why I am sharing this issue. You can download the new version and the new public key below, and instructions for restoring backups are provided.
+**Hacker News, on your TV.**<br/>
+A fork of [SmartTube](https://github.com/yuliskov/SmartTube) for Android TVs and TV boxes that shows the videos Hacker News keeps recommending.
 
-No extra actions are required since the app uses **one-time connection codes**. These codes have very limited permissions (for example, they cannot change your password). Still, you can revoke them if you want full peace of mind.
+[![Latest release](https://img.shields.io/github/v/release/dakai/SmartHackerTube?label=download&color=ff6600)](https://github.com/dakai/SmartHackerTube/releases/latest)
+[![Build](https://github.com/dakai/SmartHackerTube/actions/workflows/CI.yml/badge.svg)](https://github.com/dakai/SmartHackerTube/actions/workflows/CI.yml)
+![Android TV](https://img.shields.io/badge/Android%20TV-4.3%2B-3ddc84?logo=android&logoColor=white)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-# How to revoke access:
+<a href="https://github.com/dakai/SmartHackerTube/releases/latest"><img src="images/badge_github.png" alt="Get it on GitHub" height="52"/></a>
 
-1. Open [myaccount.google.com/security](https://myaccount.google.com/security)
-2. Find **“Your connections to third-party apps & services”**
-3. Tap **“See all connection”** and locate **YouTube TV** or **Google Drive**
-4. Select the app → **“Remove access”**
+</div>
 
-Please keep built-in security features enabled to stay protected.
+The sidebar lists HackerTube topic areas. Home is a personalized feed built from your likes, dislikes and watch history. Every video page carries the real HN comments.
 
-# SmartTube
-  
-<!-- <img width="100" src="https://github.com/yuliskov/SmartTube/blob/master/smarttubetv/src/ststable/res/mipmap-nodpi/app_icon.png" alt="logo"/> -->
+| Home | Sidebar |
+|:---:|:---:|
+| ![Home: personalized HackerTube rows](images/hackertube-feed.webp) | ![Sidebar: HackerTube topic areas](images/hackertube-sidebar.webp) |
 
-![SmartHackerTube home: personalized HackerTube rows](./images/hackertube-feed.webp)
+## What this fork adds
 
-![SmartHackerTube sidebar: Home plus the HackerTube topic areas](./images/hackertube-sidebar.webp)
+- **HackerTube sidebar** — Home plus 16 HN topic areas (Software, Systems, AI & Data, …). Each area is sorted by how strongly HN recommends its videos.
+- **Personalized Home** — rows such as *An HN classic*, *Hidden gem: loved on HN, little-watched on YouTube* and *Because you liked …* come from the same mix hackertube.org serves, built from your likes, dislikes and watch history.
+- **HN comments** — the comments from the threads that recommended the video, with the stance and the thread they came from.
+- **Remembers your place** — progress on the cards, resume where you stopped.
+- **No Google account** needed to browse or play.
+- **Inherited from SmartTube** — SponsorBlock, 8K and 60 fps, HDR, playback speed, live chat, customizable buttons.
+- **Not for phones or tablets**, and not for Samsung Tizen, LG webOS or Apple TV.
 
-SmartHackerTube is a fork of SmartTube for Android TVs and TV boxes that shows the videos Hacker News keeps recommending (hackertube.org). The sidebar lists HackerTube topic areas, Home is a personalized feed built from your likes, dislikes and watch history, and every video page carries the real HN comments.
-
-### ✅ Features
-- Clean interface 
-- SponsorBlock integration  
-- Adjustable playback speed  
-- 8K resolution support  
-- 60fps playback  
-- HDR compatibility  
-- View live chat  
-- Customizable buttons  
-- Does not require Google Services  
-- Helpful international community
-
-### ❌ Limitations
-- Not supported on phones and tablets  
-- Comment functionality is unstable  
-- Voice search and casting performance may be inferior to official apps, depending on your device  
-
-Give it a try!
-
-**Do you have any question?** Ctrl+F or ⌘F this readme first!
-
-[**Installation**](#installation) | [**Site**](https://smarttubeapp.github.io) | [**Contributors**](#contributors) | [**Donation**](#donation) | [**FAQ**](#faq) | [Support / Chat](#support) | [Build](#build) | [Translate the app](https://jtbrinkmann.de/tools/android-strings.xml-translator.html) | [Changelog](https://t.me/s/SmartTubeNewsEN) | [Liability](#liability)
-
+[**Installation**](#installation) | [**Device support**](#device-support) | [**Build**](#build) | [**FAQ**](#faq) | [**Liability**](#liability)
 
 ## Device support
 > [!IMPORTANT]  
@@ -61,15 +44,13 @@ Give it a try!
 
 ## Installation
 
-> [video of the installation](images/new/zPV0imF.mp4) (note: download url changed to `kutt.to/stn_beta` or `kutt.to/stn_stable`)
+**Do not** download these APKs from APK websites or blogs; anything not built by this repository may contain malware or ads. Only the [latest release](https://github.com/dakai/SmartHackerTube/releases/latest) is official.
 
-**Do not** download SmartTube from any **app store**, APK websites or blogs; these were uploaded by other people and may contain malware or ads. SmartTube is not officially published on any app store.
-
-There is a **beta release** (recommended) and a **stable release**. Beta gets new features and bugfixes faster than the stable release.
+Every push to `master` publishes a fresh **beta** build (signed with the release key) to the [latest release](https://github.com/dakai/SmartHackerTube/releases/latest): pick the `arm64-v8a` APK for a modern TV, `armeabi-v7a` for an old box.
 
 You can use either of the following methods to install the app:
 
-- (**Easiest**) Install [Downloader by AFTVnews](https://www.aftvnews.com/downloader/) on your Android TV, open it and enter `kutt.to/stn_beta` or `kutt.to/stn_stable`, then read, understand and confirm the security prompts. (<small>You can also enter [**79015**](https://aftv.news/79015) (for beta) or [**28544**](https://aftv.news/28544) (for stable), but this requires an extra step to install the AFTVnews Downloader browser addon if you haven't already.</small>)
+- (**Easiest**) Install [Downloader by AFTVnews](https://www.aftvnews.com/downloader/) on your Android TV, open it and enter `github.com/dakai/SmartHackerTube/releases/latest`, then pick the APK and confirm the security prompts.
 - Install a file transfer app on your Android TV, download the APK on your phone or computer and transfer it to your TV (e.g. [_Send Files to TV_](https://sendfilestotv.app/) from the Google Play Store / Amazon AppStore)
 - Download the APK onto a USB stick, put the USB stick into your TV and use a file manager app from the Google Play Store / Amazon AppStore (e.g. [_FX File Explorer_](https://play.google.com/store/apps/details?id=nextapp.fx) or [_X-plore_](https://play.google.com/store/apps/details?id=com.lonelycatgames.Xplore)). Android's preinstalled file manager does not work! Do **not** get the ad-infested _FileCommander_.
 - If you are an advanced user, you can install it using ADB. [guide](https://fossbytes.com/side-load-apps-android-tv/#h-how-to-sideload-apps-on-your-android-tv-using-adb) | [alternative guide](https://www.aftvnews.com/sideload/)
