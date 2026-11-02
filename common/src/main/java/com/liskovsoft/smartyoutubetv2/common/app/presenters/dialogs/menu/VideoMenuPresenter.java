@@ -27,6 +27,9 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.provide
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.providers.ContextMenuProvider;
 import com.liskovsoft.smartyoutubetv2.common.app.views.ChannelUploadsView;
 import com.liskovsoft.smartyoutubetv2.common.app.views.PlaybackView;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeCatalog;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeData;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeFeed;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
 import com.liskovsoft.smartyoutubetv2.common.misc.StreamReminderService;
 import com.liskovsoft.smartyoutubetv2.common.prefs.BlockedChannelData;
@@ -182,6 +185,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
         }
 
         appendReturnToBackgroundVideoButton();
+        appendHackerTubeFeedbackButtons();
 
         for (Long menuItem : MainUIData.instance(getContext()).getMenuItemsOrdered()) {
             MenuAction menuAction = mMenuMapping.get(menuItem);
@@ -203,6 +207,7 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
         }
 
         appendReturnToBackgroundVideoButton();
+        appendHackerTubeFeedbackButtons();
 
         for (Long menuItem : MainUIData.instance(getContext()).getMenuItemsOrdered()) {
             MenuAction menuAction = mMenuMapping.get(menuItem);
@@ -638,6 +643,39 @@ public class VideoMenuPresenter extends BaseMenuPresenter {
                             });
                         }
                 ));
+    }
+
+    /**
+     * HackerTube picks learn from likes and dislikes. They are local to the app and only feed the home rows.
+     */
+    private void appendHackerTubeFeedbackButtons() {
+        if (mVideo == null || mVideo.videoId == null || getContext() == null ||
+                !HackerTubeCatalog.instance(getContext()).hasVideo(mVideo.videoId)) {
+            return;
+        }
+
+        HackerTubeData data = HackerTubeData.instance(getContext());
+        String videoId = mVideo.videoId;
+
+        mDialogPresenter.appendSingleButton(
+                UiOptionItem.from(getContext().getString(R.string.ht_like),
+                        optionItem -> {
+                            boolean added = data.toggleLike(videoId);
+                            HackerTubeFeed.instance(getContext()).invalidate();
+                            MessageHelpers.showMessage(getContext(), added ? R.string.ht_liked : R.string.ht_feedback_removed);
+                            mDialogPresenter.closeDialog();
+                        },
+                        data.isLiked(videoId)));
+
+        mDialogPresenter.appendSingleButton(
+                UiOptionItem.from(getContext().getString(R.string.ht_dislike),
+                        optionItem -> {
+                            boolean added = data.toggleDislike(videoId);
+                            HackerTubeFeed.instance(getContext()).invalidate();
+                            MessageHelpers.showMessage(getContext(), added ? R.string.ht_disliked : R.string.ht_feedback_removed);
+                            mDialogPresenter.closeDialog();
+                        },
+                        data.isDisliked(videoId)));
     }
 
     private void appendOpenCommentsButton() {

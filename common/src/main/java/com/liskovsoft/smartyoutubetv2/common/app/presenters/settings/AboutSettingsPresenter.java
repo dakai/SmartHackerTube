@@ -36,9 +36,10 @@ public class AboutSettingsPresenter extends BasePresenter<Void> {
     }
 
     public void show() {
-        String mainTitle = String.format("%s %s",
+        String mainTitle = String.format("%s %s · %s",
                 getContext().getString(R.string.app_name),
-                AppInfoHelpers.getAppVersionName(getContext()));
+                AppInfoHelpers.getAppVersionName(getContext()),
+                getContext().getString(R.string.app_author));
 
         AppDialogPresenter settingsPresenter = AppDialogPresenter.instance(getContext());
 
@@ -113,6 +114,10 @@ public class AboutSettingsPresenter extends BasePresenter<Void> {
     }
 
     private void appendLinks(AppDialogPresenter settingsPresenter) {
+        OptionItem authorOption = UiOptionItem.from(String.format("%s: %s",
+                        getContext().getString(R.string.author), getContext().getString(R.string.app_author)),
+                option -> Utils.openLink(getContext(), Utils.toQrCodeLink(getContext().getString(R.string.author_url))));
+
         OptionItem releasesOption = UiOptionItem.from(getContext().getString(R.string.releases),
                 option -> Utils.openLink(getContext(), Utils.toQrCodeLink(getContext().getString(R.string.releases_url))));
 
@@ -122,6 +127,7 @@ public class AboutSettingsPresenter extends BasePresenter<Void> {
         //OptionItem webSiteOption = UiOptionItem.from(getContext().getString(R.string.web_site),
         //        option -> Utils.openLink(getContext(), Utils.toQrCodeLink(getContext().getString(R.string.web_site_url))));
 
+        settingsPresenter.appendSingleButton(authorOption);
         settingsPresenter.appendSingleButton(releasesOption);
         settingsPresenter.appendSingleButton(sourcesOption);
         //settingsPresenter.appendSingleButton(webSiteOption);

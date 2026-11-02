@@ -7,10 +7,12 @@ import com.liskovsoft.mediaserviceinterfaces.data.MediaGroup;
 import com.liskovsoft.sharedutils.helpers.Helpers;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.data.Video;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeCatalog;
 import com.liskovsoft.smartyoutubetv2.common.prefs.AppPrefs;
 import com.liskovsoft.smartyoutubetv2.common.prefs.AppPrefs.ProfileChangeListener;
 import com.liskovsoft.smartyoutubetv2.common.prefs.GeneralData;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -236,35 +238,18 @@ public class SidebarService implements ProfileChangeListener {
     }
 
     private void initSections() {
-        mDefaultSections.put(R.string.header_notifications, MediaGroup.TYPE_NOTIFICATIONS);
         mDefaultSections.put(R.string.header_home, MediaGroup.TYPE_HOME);
-        mDefaultSections.put(R.string.header_shorts, MediaGroup.TYPE_SHORTS);
-        mDefaultSections.put(R.string.header_trending, MediaGroup.TYPE_TRENDING);
-        mDefaultSections.put(R.string.header_kids_home, MediaGroup.TYPE_KIDS_HOME);
-        mDefaultSections.put(R.string.header_sports, MediaGroup.TYPE_SPORTS);
-        mDefaultSections.put(R.string.badge_live, MediaGroup.TYPE_LIVE);
-        mDefaultSections.put(R.string.header_gaming, MediaGroup.TYPE_GAMING);
-        mDefaultSections.put(R.string.header_news, MediaGroup.TYPE_NEWS);
-        mDefaultSections.put(R.string.header_music, MediaGroup.TYPE_MUSIC);
-        mDefaultSections.put(R.string.header_channels, MediaGroup.TYPE_CHANNEL_UPLOADS);
-        mDefaultSections.put(R.string.header_subscriptions, MediaGroup.TYPE_SUBSCRIPTIONS);
-        mDefaultSections.put(R.string.header_history, MediaGroup.TYPE_HISTORY);
-        mDefaultSections.put(R.string.header_blocked_channels, MediaGroup.TYPE_BLOCKED_CHANNELS);
-        mDefaultSections.put(R.string.header_playlists, MediaGroup.TYPE_USER_PLAYLISTS);
-        mDefaultSections.put(R.string.my_videos, MediaGroup.TYPE_MY_VIDEOS);
-        mDefaultSections.put(R.string.playback_queue_category_title, MediaGroup.TYPE_PLAYBACK_QUEUE);
+
+        for (int i = 0; i < HackerTubeCatalog.AREA_IDS.length; i++) {
+            mDefaultSections.put(HackerTubeCatalog.AREA_TITLES[i], HackerTubeCatalog.sectionId(i));
+        }
+
         mDefaultSections.put(R.string.header_settings, MediaGroup.TYPE_SETTINGS);
     }
 
     private void initPinnedItems() {
         for (int sectionId : mDefaultSections.values()) {
-            // Hidden sections
-            enableSection(sectionId, !Helpers.equalsAny(sectionId, new int[] {
-                    MediaGroup.TYPE_NOTIFICATIONS,
-                    MediaGroup.TYPE_PLAYBACK_QUEUE,
-                    MediaGroup.TYPE_TRENDING,
-                    MediaGroup.TYPE_BLOCKED_CHANNELS
-            }));
+            enableSection(sectionId, true);
         }
     }
 
@@ -300,12 +285,44 @@ public class SidebarService implements ProfileChangeListener {
 
         if (mPinnedItems.isEmpty()) {
             initPinnedItems();
+        } else if (!hasHackerTubeSections()) {
+            migrateToHackerTubeSections();
         }
 
         // Backward compatibility
         enableSection(MediaGroup.TYPE_SETTINGS, true);
 
         cleanupPinnedItems();
+    }
+
+    private boolean hasHackerTubeSections() {
+        for (Video item : mPinnedItems) {
+            if (item != null && HackerTubeCatalog.isAreaSection(item.sectionId)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Sidebars saved before HackerTube only hold YouTube sections. Keep the user's pinned channels and
+     * playlists, replace everything else with the HackerTube sections.
+     */
+    private void migrateToHackerTubeSections() {
+        List<Video> pinnedChannels = new ArrayList<>();
+
+        for (Video item : mPinnedItems) {
+            if (item != null && item.sectionId == -1) {
+                pinnedChannels.add(item);
+            }
+        }
+
+        mPinnedItems.clear();
+        initPinnedItems();
+        mPinnedItems.addAll(pinnedChannels);
+
+        persistState();
     }
 
     private void transferOldPinnedItems() {

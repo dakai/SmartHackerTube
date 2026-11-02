@@ -110,11 +110,14 @@ import okhttp3.Response;
 
 public class Utils {
     public static final String[] KNOWN_PACKAGES = {
-            "com.liskovsoft.smarttubetv.beta",
-            "com.teamsmart.videomanager.tv",
+            "org.dakai.smarthackertube.stable",
+            "org.dakai.smarthackertube.beta",
+            "org.dakai.smarthackertube.fdroid",
             "org.smarttube.beta",
             "org.smarttube.stable",
             "app.smarttube.fdroid",
+            "com.liskovsoft.smarttubetv.beta",
+            "com.teamsmart.videomanager.tv",
     };
     public static final String[] BACKUP_PREFS = {
             "yt_service_prefs.xml",

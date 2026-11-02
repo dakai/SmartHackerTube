@@ -903,6 +903,13 @@ public final class Video {
         return durationMs;
     }
 
+    /**
+     * Local sources know the duration before the video is opened.
+     */
+    public void setDurationMs(long durationMs) {
+        this.durationMs = durationMs;
+    }
+
     public long getPositionMs() {
         if (startTimeSeconds > 0) {
             return startTimeSeconds * 1_000L;

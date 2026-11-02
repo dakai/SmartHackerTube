@@ -12,18 +12,27 @@ import com.liskovsoft.sharedutils.mylogger.Log;
 import com.liskovsoft.sharedutils.rx.RxHelper;
 import com.liskovsoft.smartyoutubetv2.common.R;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.BasePlayerController;
+import com.liskovsoft.smartyoutubetv2.common.app.models.playback.manager.PlayerUI;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.CommentsReceiver;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.CommentsReceiver.Backup;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.AbstractCommentsReceiver;
 import com.liskovsoft.smartyoutubetv2.common.app.models.playback.ui.UiOptionItem;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.AppDialogPresenter;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeCatalog;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeComments;
+
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
 
 public class CommentsController extends BasePlayerController {
     private static final String TAG = CommentsController.class.getSimpleName();
+    private static final String HACKER_TUBE_KEY_PREFIX = "hackertube:";
     private Disposable mCommentsAction;
     private String mLiveChatKey;
     private String mCommentsKey;
+    private String mVideoId;
     private String mTitle;
     private Pair<String, Backup> mBackup;
 
@@ -40,10 +49,33 @@ public class CommentsController extends BasePlayerController {
     public void onMetadata(MediaItemMetadata metadata) {
         mLiveChatKey = metadata != null && metadata.getLiveChatKey() != null ? metadata.getLiveChatKey() : null;
         mCommentsKey = metadata != null && metadata.getCommentsKey() != null ? metadata.getCommentsKey() : null;
+        mVideoId = metadata != null ? metadata.getVideoId() : null;
         mTitle = metadata != null ? metadata.getTitle() : null;
-        if (mBackup != null && !Helpers.equals(mBackup.first, mCommentsKey)) {
+        if (mBackup != null && !Helpers.equals(mBackup.first, commentsKey())) {
             mBackup = null;
         }
+
+        // YouTube videos open the comments from the long-press menu only. HackerTube videos show the button.
+        if (hasHackerTubeComments() && mLiveChatKey == null && getPlayer() != null) {
+            getPlayer().setButtonState(R.id.action_chat, PlayerUI.BUTTON_ON);
+        }
+    }
+
+    private boolean hasHackerTubeComments() {
+        Context context = getContext();
+
+        return context != null && HackerTubeCatalog.instance(context).hasVideo(mVideoId);
+    }
+
+    /**
+     * HackerTube videos get their Hacker News comments instead of the YouTube ones.
+     */
+    private String commentsKey() {
+        if (hasHackerTubeComments()) {
+            return HACKER_TUBE_KEY_PREFIX + mVideoId;
+        }
+
+        return mCommentsKey;
     }
 
     private void openCommentsDialog() {
@@ -51,11 +83,11 @@ public class CommentsController extends BasePlayerController {
 
         disposeActions();
 
-        if (mCommentsKey == null) {
+        final String backupKey = commentsKey();
+
+        if (backupKey == null) {
             return;
         }
-
-        final String backupKey = mCommentsKey;
 
         if (getPlayer() != null) {
             getPlayer().showControls(false);
@@ -66,7 +98,7 @@ public class CommentsController extends BasePlayerController {
         CommentsReceiver commentsReceiver = new AbstractCommentsReceiver(getContext()) {
             @Override
             public void onLoadMore(CommentGroup commentGroup) {
-                if (commentGroup == null) {
+                if (commentGroup == null || commentGroup.getNextCommentsKey() == null) {
                     return;
                 }
 
@@ -75,23 +107,27 @@ public class CommentsController extends BasePlayerController {
 
             @Override
             public void onStart() {
-                if (mBackup != null && Helpers.equals(mBackup.first, mCommentsKey)) {
+                if (mBackup != null && Helpers.equals(mBackup.first, backupKey)) {
                     loadBackup(mBackup.second);
                     return;
                 }
 
-                loadComments(this, mCommentsKey);
+                loadComments(this, backupKey);
             }
 
             @Override
             public void onCommentClicked(CommentItem commentItem) {
-                if (commentItem.isEmpty()) {
+                if (commentItem.isEmpty() || commentItem.getNestedCommentsKey() == null) {
                     return;
                 }
 
                 CommentsReceiver nestedReceiver = new AbstractCommentsReceiver(getContext()) {
                     @Override
                     public void onLoadMore(CommentGroup commentGroup) {
+                        if (commentGroup == null || commentGroup.getNextCommentsKey() == null) {
+                            return;
+                        }
+
                         loadComments(this, commentGroup.getNextCommentsKey());
                     }
 
@@ -117,8 +153,8 @@ public class CommentsController extends BasePlayerController {
             @Override
             public void onFinish(Backup backup) {
                 super.onFinish(backup);
-                if (Helpers.equals(backupKey, mCommentsKey)) {
-                    mBackup = new Pair<>(mCommentsKey, backup);
+                if (Helpers.equals(backupKey, commentsKey())) {
+                    mBackup = new Pair<>(backupKey, backup);
                 }
             }
         };
@@ -129,11 +165,11 @@ public class CommentsController extends BasePlayerController {
     @Override
     public void onButtonClicked(int buttonId, int buttonState) {
         if (buttonId == R.id.action_chat) {
-            if (mCommentsKey != null && mLiveChatKey == null) {
+            if (commentsKey() != null && mLiveChatKey == null) {
                 openCommentsDialog();
             }
 
-            if (mCommentsKey == null && mLiveChatKey == null) {
+            if (commentsKey() == null && mLiveChatKey == null) {
                 MessageHelpers.showMessage(getContext(), R.string.comments_disabled);
             }
         }
@@ -157,7 +193,25 @@ public class CommentsController extends BasePlayerController {
     private void loadComments(CommentsReceiver receiver, String commentsKey) {
         disposeActions();
 
+        if (commentsKey != null && commentsKey.startsWith(HACKER_TUBE_KEY_PREFIX)) {
+            loadHackerTubeComments(receiver, commentsKey.substring(HACKER_TUBE_KEY_PREFIX.length()));
+            return;
+        }
+
         mCommentsAction = getCommentsService().getCommentsObserve(commentsKey)
+                .subscribe(
+                        receiver::addCommentGroup,
+                        error -> {
+                            Log.e(TAG, error.getMessage());
+                            receiver.addCommentGroup(null); // remove loading message
+                        }
+                );
+    }
+
+    private void loadHackerTubeComments(CommentsReceiver receiver, String videoId) {
+        mCommentsAction = Observable.fromCallable(() -> HackerTubeComments.load(videoId))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         receiver::addCommentGroup,
                         error -> {
@@ -176,6 +230,10 @@ public class CommentsController extends BasePlayerController {
     }
 
     private void toggleLike(CommentsReceiver receiver, CommentItem commentItem) {
+        if (commentItem.getNestedCommentsKey() == null) {
+            return; // HackerTube comments come from Hacker News and have no like action
+        }
+
         MyCommentItem myCommentItem = MyCommentItem.from(commentItem);
         myCommentItem.setLiked(!myCommentItem.isLiked());
 

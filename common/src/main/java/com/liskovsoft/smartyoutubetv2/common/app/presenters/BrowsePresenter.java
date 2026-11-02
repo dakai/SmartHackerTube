@@ -36,6 +36,8 @@ import com.liskovsoft.smartyoutubetv2.common.app.presenters.dialogs.menu.provide
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.SectionPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.presenters.interfaces.VideoGroupPresenter;
 import com.liskovsoft.smartyoutubetv2.common.app.views.BrowseView;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeCatalog;
+import com.liskovsoft.smartyoutubetv2.common.hackertube.HackerTubeFeed;
 import com.liskovsoft.smartyoutubetv2.common.misc.AppDataSourceManager;
 import com.liskovsoft.smartyoutubetv2.common.misc.BrowseProcessorManager;
 import com.liskovsoft.smartyoutubetv2.common.misc.MediaServiceManager;
@@ -67,6 +69,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     private final Map<Integer, Observable<List<MediaGroup>>> mRowMapping;
     private final Map<Integer, Callable<List<SettingsItem>>> mSettingsGridMapping;
     private final Map<Integer, Callable<List<Video>>> mLocalGridMappings;
+    private final Map<Integer, Callable<List<VideoGroup>>> mLocalRowMappings;
     private final Map<Integer, BrowseSection> mSectionsMapping;
     private final AppDataSourceManager mDataSourcePresenter;
     private final BrowseProcessorManager mBrowseProcessor;
@@ -87,6 +90,7 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         mRowMapping = new HashMap<>();
         mSettingsGridMapping = new HashMap<>();
         mLocalGridMappings = new HashMap<>();
+        mLocalRowMappings = new HashMap<>();
         mSectionsMapping = new HashMap<>();
         MediaServiceManager.instance().addAccountListener(this);
 
@@ -126,6 +130,9 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         int selectedSectionIndex = findSectionIndex(mCurrentSection != null ? mCurrentSection.getId() : mBootstrapSectionId);
         mBootstrapSectionId = -1;
         getView().selectSection(selectedSectionIndex != -1 ? selectedSectionIndex : mBootSectionIndex, true);
+
+        HackerTubeCatalog.instance(getContext()).load(this::updateCurrentSection);
+        HackerTubeFeed.instance(getContext()).refreshIfStale(this::updateCurrentSection);
     }
 
     @Override
@@ -140,6 +147,10 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         super.onViewResumed();
 
         refreshIfNeeded();
+
+        if (isHomeSection()) {
+            HackerTubeFeed.instance(getContext()).refreshIfStale(this::updateCurrentSection);
+        }
     }
 
     private void refreshIfNeeded() {
@@ -207,13 +218,22 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         mSectionsMapping.put(MediaGroup.TYPE_NOTIFICATIONS, new BrowseSection(MediaGroup.TYPE_NOTIFICATIONS, getContext().getString(R.string.header_notifications), BrowseSection.TYPE_GRID, R.drawable.icon_notification, false));
         mSectionsMapping.put(MediaGroup.TYPE_PLAYBACK_QUEUE, new BrowseSection(MediaGroup.TYPE_PLAYBACK_QUEUE, getContext().getString(R.string.playback_queue_category_title), BrowseSection.TYPE_GRID, R.drawable.icon_queue, false));
 
+        // HackerTube areas: one sidebar section per topic area of the bundled catalog.
+        // shortcut: every area reuses one drawable, add per-area icons when the sidebar starts to look flat.
+        for (int i = 0; i < HackerTubeCatalog.AREA_IDS.length; i++) {
+            int sectionId = HackerTubeCatalog.sectionId(i);
+            mSectionsMapping.put(sectionId, new BrowseSection(sectionId, getContext().getString(HackerTubeCatalog.AREA_TITLES[i]),
+                    BrowseSection.TYPE_GRID, R.drawable.icon_trending, false));
+        }
+
         if (getSidebarService().isSettingsSectionEnabled()) {
             mSectionsMapping.put(MediaGroup.TYPE_SETTINGS, new BrowseSection(MediaGroup.TYPE_SETTINGS, getContext().getString(R.string.header_settings), BrowseSection.TYPE_SETTINGS_GRID, R.drawable.icon_settings));
         }
     }
 
     private void initRowAndGridMapping() {
-        mRowMapping.put(MediaGroup.TYPE_HOME, getContentService().getHomeObserve());
+        // Home shows HackerTube's recommendations instead of YouTube's.
+        mLocalRowMappings.put(MediaGroup.TYPE_HOME, this::getHackerTubeHomeRows);
         mRowMapping.put(MediaGroup.TYPE_TRENDING, getContentService().getTrendingObserve());
         mRowMapping.put(MediaGroup.TYPE_KIDS_HOME, getContentService().getKidsHomeObserve());
         mRowMapping.put(MediaGroup.TYPE_SPORTS, getContentService().getSportsObserve());
@@ -269,6 +289,65 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     private void initLocalGridMapping() {
         mLocalGridMappings.put(MediaGroup.TYPE_PLAYBACK_QUEUE, () -> Playlist.instance().getAllReversed());
         mLocalGridMappings.put(MediaGroup.TYPE_BLOCKED_CHANNELS, this::getBlockedChannels);
+
+        for (int i = 0; i < HackerTubeCatalog.AREA_IDS.length; i++) {
+            int areaIndex = i;
+            mLocalGridMappings.put(HackerTubeCatalog.sectionId(i),
+                    () -> applyWatchState(HackerTubeCatalog.instance(getContext()).byArea(areaIndex)));
+        }
+    }
+
+    private List<VideoGroup> getHackerTubeHomeRows() {
+        List<VideoGroup> rows = new ArrayList<>();
+
+        // Personal picks from hackertube.org, already grouped into rows by the feed.
+        for (Map.Entry<String, List<Video>> row : HackerTubeFeed.instance(getContext()).getRows().entrySet()) {
+            appendHackerTubeRow(rows, row.getKey(), row.getValue());
+        }
+
+        if (!rows.isEmpty()) {
+            return rows;
+        }
+
+        // Offline or before the first answer: show the bundled catalog instead of an empty home.
+        HackerTubeCatalog catalog = HackerTubeCatalog.instance(getContext());
+
+        appendHackerTubeRow(rows, getContext().getString(R.string.ht_top_picks), catalog.topPicks());
+        appendHackerTubeRow(rows, getContext().getString(R.string.ht_most_recommended), catalog.mostRecommended());
+        appendHackerTubeRow(rows, getContext().getString(R.string.ht_recent), catalog.recent());
+        appendHackerTubeRow(rows, getContext().getString(R.string.ht_evergreen), catalog.evergreen());
+
+        for (int i = 0; i < HackerTubeCatalog.AREA_IDS.length; i++) {
+            appendHackerTubeRow(rows, getContext().getString(HackerTubeCatalog.AREA_TITLES[i]), catalog.byArea(i));
+        }
+
+        return rows;
+    }
+
+    private void appendHackerTubeRow(List<VideoGroup> rows, String title, List<Video> videos) {
+        if (videos.isEmpty()) {
+            return;
+        }
+
+        // No section on purpose: these cards aren't YouTube's home feed, so home-only menu actions must stay hidden.
+        VideoGroup row = VideoGroup.from(applyWatchState(videos));
+        row.setTitle(title);
+        row.setId(rows.size() + 1); // 0 is taken by the base group that clears the section
+        rows.add(row);
+    }
+
+    /**
+     * {@link VideoGroup#from(List)} stores items as is, so the local rows miss the watch state that
+     * {@link VideoGroup#add} merges. Apply it here to get the progress bar on the cards.
+     */
+    private List<Video> applyWatchState(List<Video> videos) {
+        VideoStateService stateService = VideoStateService.instance(getContext());
+
+        for (Video video : videos) {
+            video.sync(stateService.getByVideoId(video.videoId));
+        }
+
+        return videos;
     }
 
     private List<Video> getBlockedChannels() {
@@ -304,11 +383,6 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         getView().removeAllSections();
 
         int bootSectionId = getSidebarService().getBootSectionId();
-
-        // Empty Home on first run fix. Switch to something non-empty.
-        if (!getSignInService().isSigned() && VideoStateService.instance(getContext()).isEmpty()) {
-            bootSectionId = MediaGroup.TYPE_MUSIC;
-        }
 
         int index = 0;
 
@@ -539,16 +613,9 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
     }
 
     public void enableAllSections(boolean enable) {
-        enableSection(MediaGroup.TYPE_HISTORY, enable);
-        enableSection(MediaGroup.TYPE_USER_PLAYLISTS, enable);
-        enableSection(MediaGroup.TYPE_SUBSCRIPTIONS, enable);
-        enableSection(MediaGroup.TYPE_CHANNEL_UPLOADS, enable);
-        enableSection(MediaGroup.TYPE_GAMING, enable);
-        enableSection(MediaGroup.TYPE_MUSIC, enable);
-        enableSection(MediaGroup.TYPE_NEWS, enable);
-        enableSection(MediaGroup.TYPE_HOME, enable);
-        enableSection(MediaGroup.TYPE_TRENDING, enable);
-        enableSection(MediaGroup.TYPE_SHORTS, enable);
+        for (int sectionId : getSidebarService().getDefaultSections().values()) {
+            enableSection(sectionId, enable);
+        }
     }
 
     public void enableSection(int sectionId, boolean enable) {
@@ -657,8 +724,12 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
                 }
                 break;
             case BrowseSection.TYPE_ROW:
-                Observable<List<MediaGroup>> groups = mRowMapping.get(section.getId());
-                updateVideoRows(section, groups, section.isAuthOnly());
+                Callable<List<VideoGroup>> localRows = mLocalRowMappings.get(section.getId());
+                if (localRows != null) {
+                    updateLocalRows(section, localRows);
+                } else {
+                    updateVideoRows(section, mRowMapping.get(section.getId()), section.isAuthOnly());
+                }
                 break;
             case BrowseSection.TYPE_SETTINGS_GRID:
                 Callable<List<SettingsItem>> items = mSettingsGridMapping.get(section.getId());
@@ -694,6 +765,25 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         Log.d(TAG, "loadRowsHeader: Start loading section: " + section.getTitle());
 
         authCheck(authCheck, () -> updateVideoRows(section, groups));
+    }
+
+    private void updateLocalRows(BrowseSection section, Callable<List<VideoGroup>> rows) {
+        disposeActions();
+
+        if (getView() == null) {
+            return;
+        }
+
+        VideoGroup baseGroup = VideoGroup.from(section);
+        baseGroup.setAction(VideoGroup.ACTION_REPLACE);
+        getView().updateSection(baseGroup);
+        getView().showProgressBar(false);
+
+        for (VideoGroup row : Helpers.get(rows)) {
+            row.setAction(VideoGroup.ACTION_APPEND);
+            getView().updateSection(row);
+            mBrowseProcessor.process(row);
+        }
     }
 
     private void updateVideoGrid(BrowseSection section, Observable<MediaGroup> group, boolean authCheck) {
@@ -825,7 +915,12 @@ public class BrowsePresenter extends BasePresenter<BrowseView> implements Sectio
         }
 
         if (group == null) {
-            Log.e(TAG, "Can't continue group. The group is null.");
+            Log.e(TAG, "Can't continue the group. The group is null.");
+            return;
+        }
+
+        if (group.getMediaGroup() == null) {
+            // Local groups (HackerTube rows) are fully loaded from the bundled catalog.
             return;
         }
 
