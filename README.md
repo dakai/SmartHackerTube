@@ -21,9 +21,11 @@ Please keep built-in security features enabled to stay protected.
   
 <!-- <img width="100" src="https://github.com/yuliskov/SmartTube/blob/master/smarttubetv/src/ststable/res/mipmap-nodpi/app_icon.png" alt="logo"/> -->
 
-![The app screenshot](./images/browse_home.png)
+![SmartHackerTube home: personalized HackerTube rows](./images/hackertube-feed.webp)
 
-SmartTube is a free and open-source media client for Android TVs and TV boxes. It allows you to browse and play content from various public sources in a TV-optimized interface.
+![SmartHackerTube sidebar: Home plus the HackerTube topic areas](./images/hackertube-sidebar.webp)
+
+SmartHackerTube is a fork of SmartTube for Android TVs and TV boxes that shows the videos Hacker News keeps recommending (hackertube.org). The sidebar lists HackerTube topic areas, Home is a personalized feed built from your likes, dislikes and watch history, and every video page carries the real HN comments.
 
 ### ✅ Features
 - Clean interface 
