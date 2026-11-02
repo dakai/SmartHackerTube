@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="releases_url" translatable="false">https://t.me/SmartTubeNewsEN</string>
+    <string name="releases_url" translatable="false">https://github.com/dakai/SmartHackerTube/releases/latest</string>
     <string name="sources_url" translatable="false">https://github.com/dakai/SmartHackerTube</string>
     <string name="author_url" translatable="false">https://github.com/dakai</string>
     <string name="app_author" translatable="false">dakai</string>
